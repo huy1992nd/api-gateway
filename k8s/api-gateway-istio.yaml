@@ -1,0 +1,33 @@
+apiVersion: networking.istio.io/v1alpha3
+kind: Gateway
+metadata:
+  name: api-gateway-gateway
+spec:
+  selector:
+    istio: ingressgateway # Sử dụng ingress gateway mặc định của Istio
+  servers:
+    - port:
+        number: 80
+        name: http
+        protocol: HTTP
+      hosts:
+        - "*"
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: api-gateway-virtualservice
+spec:
+  hosts:
+    - "*"
+  gateways:
+    - api-gateway-gateway
+  http:
+    - match:
+        - uri:
+            prefix: "/"
+      route:
+        - destination:
+            host: api-gateway
+            port:
+              number: 3000 

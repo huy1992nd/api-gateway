@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: product-service
+  labels:
+    app: product-service
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: product-service
+  template:
+    metadata:
+      labels:
+        app: product-service
+    spec:
+      containers:
+        - name: product-service
+          image: <ECR-REPO>/product-service:latest # Thay <ECR-REPO> bằng repo ECR thực tế của bạn
+          ports:
+            - containerPort: 3000
+          env:
+            - name: NODE_ENV
+              value: "production"
+            - name: DB_HOST
+              value: "<DB_HOST>"
+            - name: DB_PORT
+              value: "<DB_PORT>"
+            - name: DB_USERNAME
+              value: "<DB_USERNAME>"
+            - name: DB_PASSWORD
+              value: "<DB_PASSWORD>"
+            - name: DB_DATABASE
+              value: "<DB_DATABASE>"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: product-service
+spec:
+  selector:
+    app: product-service
+  ports:
+    - protocol: TCP
+      port: 3000
+      targetPort: 3000
+  type: ClusterIP 
