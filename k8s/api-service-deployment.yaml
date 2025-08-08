@@ -22,7 +22,10 @@ spec:
           env:
             - name: NODE_ENV
               value: "production"
-            # Thêm các biến môi trường khác nếu cần
+            - name: USER_SERVICE_URL
+              value: "http://user-service:3000"
+            - name: PRODUCT_SERVICE_URL
+              value: "http://product-service:3000"
 ---
 apiVersion: v1
 kind: Service
