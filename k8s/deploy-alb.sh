@@ -1,7 +1,7 @@
 #!/bin/bash
 
-echo "🚀 Deploying API Gateway with Microservices to Kubernetes"
-echo "=========================================================="
+echo "🚀 Deploying API Gateway with ALB Ingress Controller"
+echo "====================================================="
 
 # Check if kubectl is installed
 if ! command -v kubectl &> /dev/null; then
@@ -11,7 +11,7 @@ fi
 
 # Check if we're connected to a cluster
 if ! kubectl cluster-info &> /dev/null; then
-    echo "❌ Not connected to Kubernetes cluster. Please connect to your cluster first."
+    echo "❌ Not connected to Kubernetes cluster. Please connect to your EKS cluster first."
     exit 1
 fi
 
@@ -38,17 +38,6 @@ kubectl apply -f product-service-deployment.yaml -n $NAMESPACE
 echo "🌐 Deploying API Gateway..."
 kubectl apply -f api-service-deployment.yaml -n $NAMESPACE
 
-echo "🔗 Applying Istio Gateway and VirtualService..."
-kubectl apply -f api-gateway-istio.yaml -n $NAMESPACE
-
-echo ""
-echo "📋 Choose your ingress controller:"
-echo "   1. Istio (current)"
-echo "   2. AWS ALB Ingress Controller"
-echo ""
-echo "To use ALB Ingress Controller, run:"
-echo "   kubectl apply -f alb-ingress-simple.yaml -n $NAMESPACE"
-
 # Wait for deployments to be ready
 echo ""
 echo "⏳ Waiting for deployments to be ready..."
@@ -56,6 +45,16 @@ kubectl wait --for=condition=available --timeout=300s deployment/postgres -n $NA
 kubectl wait --for=condition=available --timeout=300s deployment/user-service -n $NAMESPACE
 kubectl wait --for=condition=available --timeout=300s deployment/product-service -n $NAMESPACE
 kubectl wait --for=condition=available --timeout=300s deployment/api-gateway -n $NAMESPACE
+
+# Apply ALB Ingress
+echo ""
+echo "🔗 Applying ALB Ingress..."
+kubectl apply -f alb-ingress-simple.yaml -n $NAMESPACE
+
+# Wait for ALB to be provisioned
+echo ""
+echo "⏳ Waiting for ALB to be provisioned..."
+kubectl wait --for=condition=available --timeout=300s ingress/api-gateway-ingress-simple -n $NAMESPACE
 
 # Show deployment status
 echo ""
@@ -67,17 +66,24 @@ echo "🔍 Services:"
 kubectl get services -n $NAMESPACE
 
 echo ""
-echo "🌐 Istio Resources:"
-kubectl get gateway,virtualservice -n $NAMESPACE
+echo "🌐 Ingress:"
+kubectl get ingress -n $NAMESPACE
+
+echo ""
+echo "🔗 ALB Load Balancer:"
+kubectl describe ingress api-gateway-ingress-simple -n $NAMESPACE | grep -A 5 "Address:"
 
 echo ""
 echo "✅ Deployment completed!"
 echo ""
 echo "🔗 Access your API Gateway:"
-echo "   - If using minikube: kubectl port-forward svc/api-gateway 3000:3000 -n $NAMESPACE"
-echo "   - If using Istio Ingress: kubectl get ingress -n $NAMESPACE"
+echo "   - ALB URL will be shown above"
+echo "   - Or check: kubectl get ingress -n $NAMESPACE -o wide"
 echo ""
 echo "🧪 Test endpoints:"
-echo "   curl http://localhost:3000/health"
-echo "   curl http://localhost:3000/users"
-echo "   curl http://localhost:3000/products"
+echo "   curl http://<ALB-URL>/health"
+echo "   curl http://<ALB-URL>/users"
+echo "   curl http://<ALB-URL>/products"
+echo ""
+echo "📊 Monitor ALB:"
+echo "   kubectl logs -n kube-system deployment/aws-load-balancer-controller"
